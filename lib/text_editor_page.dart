@@ -72,16 +72,16 @@ class _TextEditorPageState extends State<TextEditorPage> {
         title: const Text('Breeze Editor'),
         actions: [
           IconButton(
-            icon: Icon(widget.isDarkMode ? Icons.wb_sunny : Icons.nights_stay),
-            onPressed: () => widget.toggleTheme(),
-          ),
-          IconButton(
             icon: const Icon(Icons.save),
             onPressed: _saveFile,
           ),
           IconButton(
             icon: const Icon(Icons.open_in_new),
             onPressed: _openFile,
+          ),
+          IconButton(
+            icon: Icon(widget.isDarkMode ? Icons.wb_sunny : Icons.nights_stay),
+            onPressed: () => widget.toggleTheme(),
           ),
         ],
       ),
