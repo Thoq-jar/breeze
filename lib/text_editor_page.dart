@@ -1,8 +1,13 @@
-// ignore_for_file: library_private_types_in_public_api
+// ignore_for_file: use_build_context_synchronously, avoid_web_libraries_in_flutter, deprecated_member_use
 
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'dart:convert';
+import 'dart:html' as html;
+
+import 'package:flutter/services.dart';
 
 class TextEditorPage extends StatefulWidget {
   final bool isDarkMode;
@@ -20,84 +25,156 @@ class TextEditorPage extends StatefulWidget {
 
 class _TextEditorPageState extends State<TextEditorPage> {
   final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(() {
+      if (_focusNode.hasFocus) {
+        // Focused
+        RawKeyboard.instance.addListener(_handleKeyEvent);
+      } else {
+        // Unfocused
+        RawKeyboard.instance.removeListener(_handleKeyEvent);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleKeyEvent(RawKeyEvent event) {
+    if (event is RawKeyDownEvent) {
+      if (event.isControlPressed && event.logicalKey == LogicalKeyboardKey.keyS) {
+        _saveFile();
+      } else if (event.isControlPressed && event.logicalKey == LogicalKeyboardKey.keyO) {
+        _openFile();
+      }
+    }
+  }
+
+  Future<void> _saveFile() async {
+    await saveFile(_controller.text);
+  }
+
+  Future<void> _openFile() async {
+    await openFile();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Breeze'),
+        title: const Text('Breeze Editor'),
         actions: [
           IconButton(
             icon: Icon(widget.isDarkMode ? Icons.wb_sunny : Icons.nights_stay),
             onPressed: () => widget.toggleTheme(),
           ),
+          IconButton(
+            icon: const Icon(Icons.save),
+            onPressed: _saveFile,
+          ),
+          IconButton(
+            icon: const Icon(Icons.open_in_new),
+            onPressed: _openFile,
+          ),
         ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(8.0),
-        child: Column(
-          children: [
-            Expanded(
-              child: TextField(
-                maxLines: null,
-                expands: true,
-                controller: _controller,
-                decoration: InputDecoration(
-                  hintText: 'Start typing here...',
-                  hintStyle: TextStyle(color: widget.isDarkMode ? Colors.grey : Colors.black54),
+        child: RawKeyboardListener(
+          focusNode: _focusNode,
+          child: Column(
+            children: [
+              Expanded(
+                child: TextField(
+                  maxLines: null,
+                  expands: true,
+                  controller: _controller,
+                  decoration: InputDecoration(
+                    hintText: 'Start typing here...',
+                    hintStyle: TextStyle(color: widget.isDarkMode ? Colors.grey : Colors.black54),
+                  ),
                 ),
               ),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    await saveFile(_controller.text);
-                  },
-                  icon: const Icon(Icons.save),
-                  label: const Text('Save'),
-                ),
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    await openFile();
-                  },
-                  icon: const Icon(Icons.open_in_new),
-                  label: const Text('Open'),
-                ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
   Future<void> saveFile(String content) async {
-    String? outputFilePath = await FilePicker.platform.saveFile(
-      dialogTitle: 'Please select an output file:',
-      fileName: 'my_text.txt',
-      type: FileType.custom,
-      allowedExtensions: ['txt', 'md'],
-    );
+    try {
+      if (kIsWeb) {
+        final bytes = utf8.encode(content);
+        final blob = html.Blob([Uint8List.fromList(bytes)]);
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        html.Url.revokeObjectUrl(url);
+      } else {
+        final result = await FilePicker.platform.saveFile(
+          dialogTitle: 'Please select an output file:',
+          fileName: 'my_text.txt',
+          type: FileType.custom,
+          allowedExtensions: [
+            'txt', 'md', 'dart', 'json', 'yaml', 'yml', 'toml', 'csv', 'xml',
+            'html', 'css', 'js', 'ts', 'sh', 'bat', 'ps1', 'java', 'kt', 'swift',
+            'php', 'rb', 'py', 'go', 'rs', 'sql', 'pl', 'r', 'cs', 'cpp', 'h', 'm',
+          ],
+        );
 
-    if (outputFilePath != null) {
-      await File(outputFilePath).writeAsString(content);
+        if (result != null) {
+          final file = File(result);
+          await file.writeAsString(content);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('File saved to $result')),
+          );
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error saving file')),
+      );
     }
   }
 
   Future<void> openFile() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['txt', 'md'],
-    );
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: [
+          'txt', 'md', 'dart', 'json', 'yaml', 'yml', 'toml', 'csv', 'xml',
+          'html', 'css', 'js', 'ts', 'sh', 'bat', 'ps1', 'java', 'kt', 'swift',
+          'php', 'rb', 'py', 'go', 'rs', 'sql', 'pl', 'r', 'cs', 'cpp', 'h', 'm',
+        ],
+      );
 
-    if (result != null && result.files.isNotEmpty) {
-      PlatformFile file = result.files.first;
-      String content = await File(file.path!).readAsString();
-      setState(() {
-        _controller.text = content;
-      });
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.single;
+        String content = '';
+
+        if (file.bytes != null) {
+          content = String.fromCharCodes(file.bytes!);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error reading file bytes')),
+          );
+          return;
+        }
+
+        setState(() {
+          _controller.text = content;
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error opening file')),
+      );
     }
   }
 }
