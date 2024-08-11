@@ -128,7 +128,7 @@ class _TextEditorPageState extends State<TextEditorPage> {
       } else if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
         final result = await FilePicker.platform.saveFile(
           dialogTitle: 'Please select an output file:',
-          fileName: 'my_text.txt',
+          fileName: 'foo.txt',
           type: FileType.custom,
           allowedExtensions: [
             'txt', 'md', 'dart', 'json', 'yaml', 'yml', 'toml', 'csv', 'xml',
@@ -151,7 +151,7 @@ class _TextEditorPageState extends State<TextEditorPage> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error saving file')),
+        SnackBar(content: Text('Error saving file $e')),
       );
     }
   }
