@@ -1,4 +1,4 @@
-package com.example.breeze
+package dev.thoq.breeze
 
 import io.flutter.embedding.android.FlutterActivity
 
