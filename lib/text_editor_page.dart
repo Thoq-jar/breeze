@@ -1,3 +1,6 @@
+// ignore_for_file: library_private_types_in_public_api
+
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -12,7 +15,6 @@ class TextEditorPage extends StatefulWidget {
   });
 
   @override
-  // ignore: library_private_types_in_public_api
   _TextEditorPageState createState() => _TextEditorPageState();
 }
 
@@ -23,7 +25,7 @@ class _TextEditorPageState extends State<TextEditorPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Breeze Text Editor'),
+        title: const Text('Breeze'),
         actions: [
           IconButton(
             icon: Icon(widget.isDarkMode ? Icons.wb_sunny : Icons.nights_stay),
@@ -41,7 +43,7 @@ class _TextEditorPageState extends State<TextEditorPage> {
                 expands: true,
                 controller: _controller,
                 decoration: InputDecoration(
-                  hintText: 'Edit your text here...',
+                  hintText: 'Start typing here...',
                   hintStyle: TextStyle(color: widget.isDarkMode ? Colors.grey : Colors.black54),
                 ),
               ),
@@ -72,38 +74,30 @@ class _TextEditorPageState extends State<TextEditorPage> {
   }
 
   Future<void> saveFile(String content) async {
-    FilePickerResult? result = await FilePicker.platform.pickSaveFile(
-      type: FileType.text,
-    );
-
-    PlatformFile file = result.files.first;
-    await file.writeAsString(content);
-    if (kDebugMode) {
-      if (kDebugMode) {
-      }
-    }
-    }
-
-  Future<void> openFile() async {
-    FilePickerResult? result = await FilePicker.platform.showFilesPicker(
+    String? outputFilePath = await FilePicker.platform.saveFile(
+      dialogTitle: 'Please select an output file:',
+      fileName: 'my_text.txt',
       type: FileType.custom,
       allowedExtensions: ['txt', 'md'],
     );
 
-    PlatformFile file = result.files.first;
-    String content = await file.readAsString();
-    if (kDebugMode) {
+    if (outputFilePath != null) {
+      await File(outputFilePath).writeAsString(content);
     }
-    setState(() {
-      _controller.text = content;
-    });
+  }
+
+  Future<void> openFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['txt', 'md'],
+    );
+
+    if (result != null && result.files.isNotEmpty) {
+      PlatformFile file = result.files.first;
+      String content = await File(file.path!).readAsString();
+      setState(() {
+        _controller.text = content;
+      });
     }
-}
-
-extension on FilePicker {
-  showFilesPicker({required FileType type, required List<String> allowedExtensions}) {}
-}
-
-extension on PlatformFile {
-  readAsString() {}
+  }
 }
