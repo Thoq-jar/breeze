@@ -109,7 +109,7 @@ class _TextEditorPageState extends State<TextEditorPage> {
       if (Platform.isAndroid || Platform.isIOS) {
         final result = await FilePicker.platform.saveFile(
           dialogTitle: 'Please select an output file:',
-          fileName: 'my_text.txt',
+          fileName: 'foo.txt',
           type: FileType.custom,
           allowedExtensions: [
             'txt', 'md', 'dart', 'json', 'yaml', 'yml', 'toml', 'csv', 'xml',
