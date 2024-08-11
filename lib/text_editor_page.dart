@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:convert';
-import 'dart:html' as html;
 
 import 'package:flutter/services.dart';
 
@@ -111,30 +110,23 @@ class _TextEditorPageState extends State<TextEditorPage> {
 
   Future<void> saveFile(String content) async {
     try {
-      if (kIsWeb) {
-        final bytes = utf8.encode(content);
-        final blob = html.Blob([Uint8List.fromList(bytes)]);
-        final url = html.Url.createObjectUrlFromBlob(blob);
-        html.Url.revokeObjectUrl(url);
-      } else {
-        final result = await FilePicker.platform.saveFile(
-          dialogTitle: 'Please select an output file:',
-          fileName: 'my_text.txt',
-          type: FileType.custom,
-          allowedExtensions: [
-            'txt', 'md', 'dart', 'json', 'yaml', 'yml', 'toml', 'csv', 'xml',
-            'html', 'css', 'js', 'ts', 'sh', 'bat', 'ps1', 'java', 'kt', 'swift',
-            'php', 'rb', 'py', 'go', 'rs', 'sql', 'pl', 'r', 'cs', 'cpp', 'h', 'm',
-          ],
-        );
+      final result = await FilePicker.platform.saveFile(
+        dialogTitle: 'Please select an output file:',
+        fileName: 'my_text.txt',
+        type: FileType.custom,
+        allowedExtensions: [
+          'txt', 'md', 'dart', 'json', 'yaml', 'yml', 'toml', 'csv', 'xml',
+          'html', 'css', 'js', 'ts', 'sh', 'bat', 'ps1', 'java', 'kt', 'swift',
+          'php', 'rb', 'py', 'go', 'rs', 'sql', 'pl', 'r', 'cs', 'cpp', 'h', 'm',
+        ],
+      );
 
-        if (result != null) {
-          final file = File(result);
-          await file.writeAsString(content);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('File saved to $result')),
-          );
-        }
+      if (result != null) {
+        final file = File(result);
+        await file.writeAsString(content);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('File saved to $result')),
+        );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
