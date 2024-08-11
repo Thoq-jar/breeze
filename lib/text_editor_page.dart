@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 class TextEditorPage extends StatefulWidget {
   final bool isDarkMode;
@@ -23,7 +24,9 @@ class TextEditorPage extends StatefulWidget {
 class _TextEditorPageState extends State<TextEditorPage> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
-
+  bool _isPreviewMode = false;
+  double _fontSize = 16.0;
+  
   @override
   void initState() {
     super.initState();
@@ -60,23 +63,121 @@ class _TextEditorPageState extends State<TextEditorPage> {
     await openFile();
   }
 
+  Future<void> _openSettings() async {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => SettingsPage(
+          isDarkMode: widget.isDarkMode,
+          toggleTheme: widget.toggleTheme,
+          changeFontSize: changeFontSize,
+          about: about,
+        ),
+      ),
+    );
+  }
+  
+    void about() {
+      showAboutDialog(context: context, applicationName: 'Breeze Editor', applicationVersion: '1.0.0', applicationIcon: const Icon(Icons.edit), children: [
+        const Text('A lightweight, fast and simple and open source Text/Markdown editor.'),
+        const Text('Made with <3 by the Thoq.'),
+        const Text('Source code available at https://github.com/Thoq-jar/breeze'),
+      ]);
+    }
+
+    void changeFontSize() {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          double selectedFontSize = _fontSize;
+          return AlertDialog(
+            title: const Text('Change Font Size'),
+            content: SingleChildScrollView(
+              child: ListBody(
+                children: <Widget>[
+                  StatefulBuilder(
+                    builder: (BuildContext context, StateSetter setState) {
+                      return Column(
+                        children: [
+                          Slider(
+                            value: selectedFontSize,
+                            min: 10.0,
+                            max: 30.0,
+                            onChanged: (double value) {
+                              setState(() {
+                                selectedFontSize = value;
+                              });
+                            },
+                          ),
+                          Text('Selected Font Size: ${selectedFontSize.toStringAsFixed(1)}'),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('Cancel'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+              TextButton(
+                child: const Text('Apply'),
+                onPressed: () {
+                  setState(() {
+                    _fontSize = selectedFontSize;
+                  });
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        },
+      );
+    }
+
+    void _togglePreviewMode() {
+    setState(() {
+      _isPreviewMode = !_isPreviewMode;
+    });
+  }
+ 
+   Future<void> _openActions() async {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ActionsPage(
+          saveFile: _saveFile,
+          openFile: _openFile,
+          togglePreviewMode: _togglePreviewMode,
+        ),
+      ),
+    );
+  }
+
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Breeze Editor'),
+        title: const Text(
+          'Breeze Editor',
+          style: TextStyle(
+            fontSize: 30.0,
+            fontWeight: FontWeight.w300,
+          ),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: _saveFile,
+            tooltip: 'Actions',
+            icon: const Icon(Icons.menu),
+            onPressed: _openActions,
           ),
           IconButton(
-            icon: const Icon(Icons.open_in_new),
-            onPressed: _openFile,
-          ),
-          IconButton(
-            icon: Icon(widget.isDarkMode ? Icons.wb_sunny : Icons.nights_stay),
-            onPressed: () => widget.toggleTheme(),
+            tooltip: 'Settings',
+            icon: const Icon(Icons.settings),
+            onPressed: _openSettings,
           ),
         ],
       ),
@@ -84,31 +185,37 @@ class _TextEditorPageState extends State<TextEditorPage> {
         padding: const EdgeInsets.all(8.0),
         child: RawKeyboardListener(
           focusNode: _focusNode,
-          child: Column(
-            children: [
-              Expanded(
-                child: TextField(
-                  maxLines: null,
-                  expands: true,
-                  controller: _controller,
-                  decoration: InputDecoration(
-                    hintText: 'Start typing here...',
-                    hintStyle: TextStyle(color: widget.isDarkMode ? Colors.grey : Colors.black54),
-                  ),
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              children: [
+                Expanded(
+                  child: _isPreviewMode
+                      ? Markdown(data: _controller.text)
+                        : TextField(
+                          maxLines: null,
+                          expands: true,
+                          controller: _controller,
+                          style: TextStyle(fontSize: _fontSize),
+                          decoration: InputDecoration(
+                          hintText: 'Start typing here...',
+                          hintStyle: TextStyle(color: widget.isDarkMode ? Colors.grey : Colors.black54, fontSize: _fontSize),
+                          ),
+                        ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
-
+  
   Future<void> saveFile(String content) async {
     try {
       if (Platform.isAndroid || Platform.isIOS) {
         final result = await FilePicker.platform.saveFile(
-          dialogTitle: 'Please select an output file:',
+          dialogTitle: 'Save:',
           fileName: 'foo.txt',
           type: FileType.custom,
           allowedExtensions: [
@@ -189,5 +296,99 @@ class _TextEditorPageState extends State<TextEditorPage> {
         const SnackBar(content: Text('Error opening file')),
       );
     }
+  }
+}
+
+class SettingsPage extends StatelessWidget {
+  final bool isDarkMode;
+  final Function toggleTheme;
+  final Function changeFontSize;
+  final Function about;
+
+  const SettingsPage({
+    super.key,
+    required this.isDarkMode,
+    required this.toggleTheme,
+    required this.changeFontSize,
+    required this.about,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Breeze Settings'),
+      ),
+      body: Column(
+        children: [
+          ListTile(
+            leading: Icon(isDarkMode ? Icons.wb_sunny : Icons.nights_stay),
+            title: const Text('Toggle Theme'),
+            onTap: () => toggleTheme(),
+          ),
+          ListTile(
+            leading: const Icon(Icons.font_download),
+            title: const Text('Font Size'),
+            onTap: () => changeFontSize(),
+          ),
+          ListTile(
+            leading: const Icon(Icons.info),
+            title: const Text('About'),
+            onTap: () => about(),
+          ),
+          ListTile(
+            leading: const Icon(Icons.close),
+            title: const Text('Close'),
+            onTap: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ActionsPage extends StatelessWidget {
+  final Future<void> Function() saveFile;
+  final Future<void> Function() openFile;
+  final void Function() togglePreviewMode;
+
+  const ActionsPage({
+    super.key,
+    required this.saveFile,
+    required this.openFile,
+    required this.togglePreviewMode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Actions'),
+      ),
+      body: Column(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.save),
+            title: const Text('Save File'),
+            onTap: () => saveFile(),
+          ),
+          ListTile(
+            leading: const Icon(Icons.open_in_new),
+            title: const Text('Open File'),
+            onTap: () => openFile(),
+          ),
+          ListTile(
+            leading: const Icon(Icons.preview),
+            title: const Text('Toggle Markdown Preview'),
+            onTap: () => togglePreviewMode(),
+          ),
+          ListTile(
+            leading: const Icon(Icons.close),
+            title: const Text('Close'),
+            onTap: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+    );
   }
 }
