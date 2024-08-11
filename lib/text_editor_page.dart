@@ -1,9 +1,9 @@
 // ignore_for_file: use_build_context_synchronously, avoid_web_libraries_in_flutter, deprecated_member_use
 
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-
 import 'package:flutter/services.dart';
 
 class TextEditorPage extends StatefulWidget {
@@ -29,10 +29,8 @@ class _TextEditorPageState extends State<TextEditorPage> {
     super.initState();
     _focusNode.addListener(() {
       if (_focusNode.hasFocus) {
-        // Focused
         RawKeyboard.instance.addListener(_handleKeyEvent);
       } else {
-        // Unfocused
         RawKeyboard.instance.removeListener(_handleKeyEvent);
       }
     });
@@ -108,22 +106,47 @@ class _TextEditorPageState extends State<TextEditorPage> {
 
   Future<void> saveFile(String content) async {
     try {
-      final result = await FilePicker.platform.saveFile(
-        dialogTitle: 'Please select an output file:',
-        fileName: 'my_text.txt',
-        type: FileType.custom,
-        allowedExtensions: [
-          'txt', 'md', 'dart', 'json', 'yaml', 'yml', 'toml', 'csv', 'xml',
-          'html', 'css', 'js', 'ts', 'sh', 'bat', 'ps1', 'java', 'kt', 'swift',
-          'php', 'rb', 'py', 'go', 'rs', 'sql', 'pl', 'r', 'cs', 'cpp', 'h', 'm',
-        ],
-      );
+      if (Platform.isAndroid || Platform.isIOS) {
+        final result = await FilePicker.platform.saveFile(
+          dialogTitle: 'Please select an output file:',
+          fileName: 'my_text.txt',
+          type: FileType.custom,
+          allowedExtensions: [
+            'txt', 'md', 'dart', 'json', 'yaml', 'yml', 'toml', 'csv', 'xml',
+            'html', 'css', 'js', 'ts', 'sh', 'bat', 'ps1', 'java', 'kt', 'swift',
+            'php', 'rb', 'py', 'go', 'rs', 'sql', 'pl', 'r', 'cs', 'cpp', 'h', 'm',
+          ],
+        );
 
-      if (result != null) {
-        final file = File(result);
-        await file.writeAsString(content);
+        if (result != null) {
+          final file = File(result);
+          await file.writeAsString(content);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('File saved to $result')),
+          );
+        }
+      } else if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+        final result = await FilePicker.platform.saveFile(
+          dialogTitle: 'Please select an output file:',
+          fileName: 'my_text.txt',
+          type: FileType.custom,
+          allowedExtensions: [
+            'txt', 'md', 'dart', 'json', 'yaml', 'yml', 'toml', 'csv', 'xml',
+            'html', 'css', 'js', 'ts', 'sh', 'bat', 'ps1', 'java', 'kt', 'swift',
+            'php', 'rb', 'py', 'go', 'rs', 'sql', 'pl', 'r', 'cs', 'cpp', 'h', 'm',
+          ],
+        );
+
+        if (result != null) {
+          final file = File(result);
+          await file.writeAsString(content);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('File saved to $result')),
+          );
+        }
+      } else if (kIsWeb) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('File saved to $result')),
+          const SnackBar(content: Text('Web support is not (yet) implemented!')),
         );
       }
     } catch (e) {
